@@ -1,6 +1,7 @@
 const fs = require('fs');
 const {MongoClient} = require('mongodb');
 const express = require('express');
+const bcrypt = require('bcryptjs');
 
 class Server {
     constructor() {
