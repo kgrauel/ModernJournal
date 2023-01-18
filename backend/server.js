@@ -19,6 +19,14 @@ class Endpoint {
     }
 }
 
+class AuthInfo {
+    constructor(email, privilegeLevel, token) {
+        this.email = email;
+        this.privilegeLevel = privilegeLevel;
+        this.token = token;
+    }
+}
+
 
 class Server {
     constructor() {
@@ -49,7 +57,8 @@ class Server {
             
             // Check privilege level and look up session token
 
-            let authEmail = null;
+            let authInfo = null;
+
             if (endpoint.privilegeLevel > PRIVILEGE_NONE) {
                 if (!req.body.token) {
                     res.status(401).json({ success: false, message: 'Unauthorized'});
@@ -59,7 +68,7 @@ class Server {
 
                 let token = req.body.token;
                 let session = await this.db.collection('sessions')
-                    .findOne({session_id: token});
+                    .findOne({session_id: token, expires: {$gt: Date.now()}});
 
                 if (!session) {
                     res.status(401).json({ success: false, message: 'Unauthorized'});
@@ -74,13 +83,13 @@ class Server {
                     return;
                 }
 
-                authEmail = session.email;
+                authInfo = new AuthInfo(session.email, privilege, token);
             }
 
-            console.log(`  => auth ${authEmail}`);
+            console.log(`  => auth: ${authInfo ? authInfo.email : 'none'}`);
 
             // Call the endpoint handler
-            await endpoint.handler(authEmail, this, req.body, (result) => {
+            await endpoint.handler(authInfo, this, req.body, (result) => {
                 res.status(200).json({
                     success: true,
                     ...result
@@ -89,7 +98,7 @@ class Server {
             }, (err) => {
                 res.status(500).json({
                     success: false,
-                    message: JSON.stringify(err),
+                    message: err + "",
                 });
                 console.log(`  => error ${JSON.stringify(err)}`);
             });
@@ -170,18 +179,18 @@ async function main() {
 
     SERVER.handle(new Endpoint(
         '/api/authenticate', 'POST', 
-        async (auth_email, server, params, resolve, reject) => {
+        async (auth, server, params, resolve, reject) => {
             let {email, password} = params;
             let user = await server.db.collection('users').findOne({email: email});
-            if (!user) reject("Invalid email or password");
+            if (!user) { reject("Invalid email or password"); return; }
 
             let passwordMatch = await bcrypt.compare(password, user.password);
-            if (!passwordMatch) reject("Invalid email or password");
+            if (!passwordMatch) { reject("Invalid email or password"); return; }
 
             // The user has been successfully logged in.
             // Generate a session token and send it back to the client.
             let token = await server.generateSessionToken(user.email);
-            if (!token) reject("Error generating session token");
+            if (!token) { reject("Error generating session token"); return; }
 
             resolve({token: token});
         }, {
@@ -201,9 +210,9 @@ async function main() {
 
     SERVER.handle(new Endpoint(
         '/api/ping', 'POST',
-        async (auth_email, server, params, resolve, reject) => {
+        async (auth, server, params, resolve, reject) => {
             let pingTime = await server.pingMongo();
-            resolve({time_ms: pingTime});
+            resolve({time_ms: pingTime, email: auth.email});
         }, {}, PRIVILEGE_USER
     ));
 

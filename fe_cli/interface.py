@@ -33,24 +33,16 @@ if HOST[-1] != '/':
 
 # API calls, all sync
 
+def request(path, data):
+    url = HOST + path
+    try:
+        r = requests.post(url, json=data)
+        return r.json()
+    except:
+        return {'success': False, 'message': 'Could not communicate with endpoint.'}
+
+def ping(token):
+    return request('api/ping', {'token': token})
+
 def authenticate(email, password):
-    url = HOST + 'api/authenticate'
-    data = {'email': email, 'password': password}
-    r = requests.post(url, json=data)
-    return r.json()
-
-
-print(requests.post(HOST + 'api/ping', json={
-    'token': 'f2gf2g'
-}).json())
-
-
-auth = requests.post(HOST + 'api/authenticate', json={
-    'email': SECRETS['test_users'][0]['email'],
-    'password': SECRETS['test_users'][0]['password'],
-}).json()
-print(auth)
-
-print(requests.post(HOST + 'api/ping', json={
-    'token': auth['token']
-}).json())
+    return request('api/authenticate', {'email': email, 'password': password})
