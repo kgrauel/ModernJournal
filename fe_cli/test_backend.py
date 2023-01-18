@@ -66,3 +66,31 @@ def test_email_password_authentication():
     # Ensure tokens are 32 characters long
     assert len(valid_result["token"]) == 32
     assert len(valid_result_2["token"]) == 32
+
+
+def test_logout():
+    """Tests that logging out invalidates the token."""
+
+    test_valid_email = SECRETS["test_users"][0]["email"]
+    test_valid_password = SECRETS["test_users"][0]["password"]
+
+    # Test valid login
+    valid_result = interface.authenticate(test_valid_email, test_valid_password)
+    assert valid_result["success"] == True
+    assert valid_result["token"] != None
+
+    # Ping to check token
+    ping_result = interface.ping(valid_result["token"])
+    assert ping_result["success"] == True
+    assert ping_result["time_ms"] >= 0
+    assert ping_result["email"] == test_valid_email
+
+    # Test logout
+    logout_result = interface.logout(valid_result["token"])
+    assert logout_result["success"] == True
+
+    # Ping to check token
+    ping_result = interface.ping(valid_result["token"])
+    assert ping_result["success"] == False
+    assert ping_result["message"] == "Unauthorized"
+

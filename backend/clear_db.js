@@ -50,11 +50,14 @@ async function clearDB() {
 
         let USERS = require('./initial_data/users');
         let SESSIONS = require('./initial_data/sessions');
+        let REQUESTS = require('./initial_data/requests');
 
         console.log("Inserting initial data...");
 
         await db.collection('users').insertMany(USERS);
         await db.collection('sessions').insertMany(SESSIONS);
+        await db.collection('requests').insertMany(REQUESTS);
+
 
         console.log("Building indices...");
 
@@ -63,6 +66,13 @@ async function clearDB() {
         await db.collection('sessions').createIndex({session_id: 1}, {unique: true});
         await db.collection('sessions').createIndex({expires: 1});
         await db.collection('sessions').createIndex({user: 1});
+
+        await db.collection('requests').createIndex({time: 1});
+        await db.collection('requests').createIndex({user: 1});
+        await db.collection('requests').createIndex({ip: 1});
+        await db.collection('requests').createIndex({path: 1});
+        await db.collection('requests').createIndex({result_status: 1});
+
 
         console.log("Done!");
 

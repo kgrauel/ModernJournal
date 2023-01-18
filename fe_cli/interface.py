@@ -41,8 +41,11 @@ def request(path, data):
     except:
         return {'success': False, 'message': 'Could not communicate with endpoint.'}
 
+def authenticate(email, password):
+    return request('api/authenticate', {'email': email, 'password': password})
+
 def ping(token):
     return request('api/ping', {'token': token})
 
-def authenticate(email, password):
-    return request('api/authenticate', {'email': email, 'password': password})
+def logout(token, invalidate_all=False):
+    return request('api/logout', {'token': token, 'invalidate_all': invalidate_all})

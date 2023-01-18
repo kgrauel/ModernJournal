@@ -8,14 +8,16 @@
 - [x] /api/ping endpoint to let client check auth worked
 - [x] Session timeout logic
 - [x] Set up backend unit testing framework
+- [x] Logout endpoint & tests
+- [x] Figure out how to get the user's IP address from the request
+- [x] Log requests
+- [x] Rate limit requests
 
-- [ ] Logout endpoint & tests
-
-
-- [ ] Figure out how to get the user's IP address from the request
-- [ ] Log requests in a collection with a 60-second TTL
-- [ ] Log security failures in a collection with a 24-hour TTL
-- [ ] Rate limit requests and secfails with a middleware
+- [ ] Allow the use of a secrets override file for testing
+- [ ] Have the testing initialize a separate database
+- [ ] Create testing endpoints that allow rate limiting to be turned on or off
 - [ ] Test rate limiting
+
+
 
 

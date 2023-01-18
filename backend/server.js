@@ -36,6 +36,7 @@ class Server {
         this.db = this.mongoClient.db(this.secrets.db_name);
 
         this.app = express();
+        this.app.set('trust proxy', 'loopback');
         this.configureMiddleware();
 
         this.endpoints = new Map();
@@ -45,6 +46,7 @@ class Server {
         this.endpoints.set(endpoint.path, endpoint);
 
         let lambda = async (req, res) => {
+
             // Validate request
             if (endpoint.validator) {
                 let errors = validate(req.body, endpoint.validator);
@@ -88,19 +90,38 @@ class Server {
 
             console.log(`  => auth: ${authInfo ? authInfo.email : 'none'}`);
 
+            let requestInfo =  {
+                time: Date.now(),
+                ip: req.ip,
+                auth: authInfo,
+                method: endpoint.method,
+                path: endpoint.path,
+                params: req.body,
+            };
+
             // Call the endpoint handler
             await endpoint.handler(authInfo, this, req.body, (result) => {
-                res.status(200).json({
+                requestInfo.result = {
                     success: true,
                     ...result
-                });
+                }
+                requestInfo.result_status = 200;
+                res.status(200).json(requestInfo.result);
                 console.log(`  => success ${JSON.stringify(result)}`);
+
+                // Runs in background
+                this.db.collection('requests').insertOne(requestInfo);
             }, (err) => {
-                res.status(500).json({
+                requestInfo.result = {
                     success: false,
-                    message: err + "",
-                });
+                    message: "" + err
+                }
+                requestInfo.result_status = 500;
+                res.status(500).json(requestInfo.result);
                 console.log(`  => error ${JSON.stringify(err)}`);
+
+                // Runs in background
+                this.db.collection('requests').insertOne(requestInfo);
             });
         };
 
@@ -130,11 +151,38 @@ class Server {
     configureMiddleware() {
         this.app.use(express.json());
 
-        this.app.use((req, res, next) => {
+        this.hitCount = 0;
+        
+        this.app.use(async (req, res, next) => {
             // The use of the JSON middleware implies that the request body
             // req.body is a JSON object. On any failure, it's {}.
+            this.hitCount++;
+            req.hitCount = this.hitCount;
 
-            console.log(`[${req.method}] ${req.path} ${JSON.stringify(req.body)}`);
+            // Check this IP for # of requests in last 30 seconds
+            let ip = req.ip;
+            let now = Date.now();
+            let cutoff = now - this.secrets.rate_limit_window_ms;
+
+            let requests = await this.db.collection('requests').countDocuments({
+                time: {$gt: cutoff},
+                ip: ip,
+            });
+
+            let pause = 0;
+            if (requests > this.secrets.rate_limit_request_count_start) {
+                pause = (requests - this.secrets.rate_limit_request_count_start)
+                    * this.secrets.rate_limit_delay_per_request_ms;
+            }
+
+            console.log(
+                `[${req.method} #${this.hitCount}`
+                + (requests > this.secrets.rate_limit_request_count_start ?
+                    ` RL ${requests} +${pause}ms` : ``)
+                + `] ${req.path} ${JSON.stringify(req.body)}`);
+
+            await new Promise((resolve) => setTimeout(resolve, pause));
+
             next();
         });
     }
@@ -215,6 +263,24 @@ async function main() {
             resolve({time_ms: pingTime, email: auth.email});
         }, {}, PRIVILEGE_USER
     ));
+
+    SERVER.handle(new Endpoint(
+        '/api/logout', 'POST',
+        async (auth, server, params, resolve, reject) => {
+            let {invalidate_all} = params;
+            if (invalidate_all) {
+                await server.db.collection('sessions').deleteMany({email: auth.email});
+            } else {
+                await server.db.collection('sessions').deleteOne({session_id: auth.token});
+            }
+            resolve({});
+        }, {
+            invalidate_all: {
+                type: 'boolean'
+            }
+        }, PRIVILEGE_USER
+    ));
+
 
     SERVER.startListening();
 }
