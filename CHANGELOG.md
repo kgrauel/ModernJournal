@@ -12,12 +12,13 @@
 - [x] Figure out how to get the user's IP address from the request
 - [x] Log requests
 - [x] Rate limit requests
-
-- [ ] Allow the use of a secrets override file for testing
-- [ ] Have the testing initialize a separate database
+- [x] Allow the use of a secrets override file for testing
+  - [x] Did it for nuke_database and clear_db
+  - [ ] Do it for server.js so testing can open server directly
+- [ ] Have the tests initialize a separate database, run testing server
 - [ ] Create testing endpoints that allow rate limiting to be turned on or off
 - [ ] Test rate limiting
-
+- [ ] Test logout all
 
 
 

@@ -14,4 +14,4 @@ const REQUESTS = [
     }
 ];
 
-module.exports = REQUESTS;
+module.exports = (secrets) => { return REQUESTS; }

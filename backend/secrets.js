@@ -9,18 +9,19 @@ const DEFAULT_SECRETS = {
     "test_users": []
 }
 
-let SINGLETON_SECRETS = null;
+let SECRETS_CACHE = new Map();
 
-function getSecrets() {
-    if (SINGLETON_SECRETS) {
-        return SINGLETON_SECRETS;
+function getSecrets(path = './secrets.json') {
+    // Check if we've already loaded the secrets for this path
+    if (SECRETS_CACHE.has(path)) {
+        return SECRETS_CACHE.get(path);
     }
 
     let secrets = null;
     try {
-        secrets = JSON.parse(fs.readFileSync('./secrets.json', 'utf8'));
+        secrets = JSON.parse(fs.readFileSync(path, 'utf8'));
     } catch (err) {
-        console.error(`Error reading secrets.json: ${err}`);
+        console.error(`Error reading ${path}: ${err}`);
         console.error(`Using default secrets instead.`);
         secrets = DEFAULT_SECRETS;
     }
@@ -31,6 +32,9 @@ function getSecrets() {
             secrets[key] = DEFAULT_SECRETS[key];
         }
     }
+
+    // Cache the secrets for this path
+    SECRETS_CACHE.set(path, secrets);
 
     return secrets;
 }

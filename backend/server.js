@@ -5,6 +5,13 @@ const bcrypt = require('bcryptjs');
 const validate = require('validate.js');
 const getSecrets = require('./secrets');
 
+const cla = require('command-line-args');
+const optionDefinitions = [
+    { name: 'secrets', alias: 's', type: String, defaultValue: './secrets.json' },
+];
+const OPTIONS = cla(optionDefinitions);
+
+
 const PRIVILEGE_NONE = 0;
 const PRIVILEGE_USER = 1;
 const PRIVILEGE_ADMIN = 2;
@@ -30,7 +37,7 @@ class AuthInfo {
 
 class Server {
     constructor() {
-        this.secrets = getSecrets();
+        this.secrets = getSecrets(OPTIONS.secrets);
 
         this.mongoClient = new MongoClient(this.secrets.db_uri, {useNewUrlParser: true});
         this.db = this.mongoClient.db(this.secrets.db_name);
@@ -222,6 +229,8 @@ class Server {
 }
 
 async function main() {
+
+
     const SERVER = new Server();
     await SERVER.pingMongo();
 

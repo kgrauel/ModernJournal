@@ -7,8 +7,8 @@ import json
 # This is necessary because we need to know what testing users are in the database.
 # Their plaintext passwords will be in the secrets file.
 
-def get_secrets():
-    with open('../backend/secrets.json') as f:
+def get_secrets(path='../backend/secrets.json'):
+    with open(path) as f:
         secrets = json.load(f)
     return secrets
 
